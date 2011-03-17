@@ -25,13 +25,23 @@
 Simple pong game to test how ecore and evas work together.
 """
 
+from functools   import partial
 from collections import defaultdict
+from random      import uniform as random, seed
 
 from ecore.evas  import SoftwareX11
 from ecore       import main_loop_begin, animator_add, animator_frametime_set
 from evas        import Rect
 
+
+seed()
+
 
+# The size of the screen
+SCREEN_SIZE  = (480, 480)
+GAME_RUNNING = True
+
+# The game (you just lost it :3) 
 def game_main():
     # Instantiate a canvas using the SoftwareX11 rendering engine. This
     # does all the work of creating the canvas, assigning it to the
@@ -40,26 +50,38 @@ def game_main():
     # From there onwards, the only thing left is add objects to the
     # Canvas, and manipulate these objects. The `ecore' loop will call
     # render automatically on `idle'.
-    ee     = SoftwareX11(w=640, h=480)
+    w, h   = SCREEN_SIZE
+    ee     = SoftwareX11(w=w, h=h)
     canvas = ee.evas
 
     # Setups the game window and field by creating objects and adding
     # them to the canvas.
     setup_field(ee)
-    
-    # Makes sure our objects are properly updated whenever the rendering
-    # engine's size changes.
-    ee.callback_resize = on_resize
 
     # Sets the framerate of the game to 60FPS
     animator_frametime_set(1.0 / 60.0)
+
+    # Adds some useful hooks
+    add_hook('game_over', game_over, canvas)
 
     # Finally, shows all this stuff to the user and enters the main
     # loop. From there ownards the only say we have is on the callbacks
     # from the events we've set to watch.
     ee.title = "Pong"
+    ee.size_max_set(*SCREEN_SIZE)
+    ee.size_min_set(*SCREEN_SIZE)
+
     ee.show()
     main_loop_begin()
+
+# Whenever we lose the gayme
+def game_over(canvas):
+    global GAME_RUNNING
+
+    bg  = background(canvas, (0, 0, 0, 128))
+    txt = text(canvas, "GAME OVER", 48)
+    GAME_RUNNING = False
+
 
 
 # Hooks are collections of functions that are called when a certain
@@ -68,14 +90,15 @@ def game_main():
 hooks = defaultdict(list)
 
 # Allows the user to add new hooks to a certain kind of event
-def add_hook(kind, fn):
-    hooks[kind].append(fn)
+def add_hook(kind, fn, *args, **kwargs):
+    hooks[kind].append(partial(fn, *args, **kwargs))
 
 # Allows the user to fire all hooks related to the given event, with any
 # optional positional/keyword arguments
 def fire_hooks(kind, *args, **kwargs):
     for hook in hooks[kind]:
         hook(*args, **kwargs)
+
 
 
 # Setups the field, by adding background, paddles, ball and the textual
@@ -86,38 +109,66 @@ def fire_hooks(kind, *args, **kwargs):
 def setup_field(engine):
     canvas = engine.evas
 
-    background(canvas, (255, 255, 255, 255))
-    human_paddle(canvas)
-    paddle(canvas, canvas.rect.right - 30)
+    background(canvas, (34, 37, 42, 255))
+    score(canvas)
 
-  
-# Makes sure all objects are aware of resize events, by adding a hook to
-# it.
-def on_resize(engine):
-    fire_hooks('resize', engine, engine.evas)
+    xpaddle('top', canvas, 10)
+    xpaddle('bottom', canvas, canvas.rect.right - PADDLE_WIDTH - 10)
+    ypaddle('left', canvas, 10)
+    ypaddle('right', canvas, canvas.rect.bottom - PADDLE_WIDTH - 10)
+    ball(canvas)
+
 
 
-# Creates a background for the canvas, that's resized automatically in
-# response to a resize event.
-def background(canvas, colour):
-    def on_resize(engine, canvas):
-        bg.resize(*canvas.size)
+# Abstracts some common canvas classes in more specialized ones. In this
+# case, backgrounds and centered texts. 
 
+# Creates a background for the canvas
+def background(canvas, colour):
     bg = canvas.Rectangle(color=colour)
     bg.resize(*canvas.size)
     bg.show()
-    add_hook('resize', on_resize)
 
     return bg
 
+def text(canvas, string, size, colour=(200, 200, 200, 128)):
+    text = canvas.Text(color=colour)
+    text.text_set(string)
+    text.font_set('Monospace', size)
+    text.show()
+    center_text(canvas.rect, text)
+
+    return text
+
+def center_text(rect, text):
+    x, y = rect.center
+    text.move(x - text.horiz_advance/2
+             ,y - text.vert_advance/2)
+
+
 
+# The sizes of the paddle
+PADDLE_WIDTH  = 20
+PADDLE_HEIGHT = 200 
+
 # Creates a base paddle, at the given position, and using the given
-# controller function — if any. 
-def paddle(canvas, xpos, controller=None):
-    pad = canvas.Rectangle(color=(85,87,83,255))
-    pad.resize(20, 100)
-    pad.move(xpos, canvas.rect.center_y - 50)
+# controller function. 
+def paddle(name, canvas, pos, size, controller):
+    def handle_input():
+        screen = canvas.rect.move_by(10, 10).inflate(-20, -20)
+        px, py = canvas.pointer_canvas_xy
+        controller(pad, px, py)
+        pad.rect = pad.rect.clamp(screen)
+
+        return GAME_RUNNING
+
+    pad = canvas.Rectangle(name=name, color=(238, 238, 236, 255))
+    pad.resize(*size)
+    pad.move(*pos)
     pad.show()
+
+    # Adds the pad area as a solid area, so the ball collides with it.
+    add_collision_object(pad)
 
     # Uses the ecore animator callbacks to call the paddle controller
     # function, this allows control to be done at a fixed framerate, and
@@ -125,27 +176,122 @@ def paddle(canvas, xpos, controller=None):
     #
     # Note that the controller does NOT process events, it only responds
     # to it by updating the paddle's state.
-    if controller is not None:
-        animator_add(controller, pad)
+    animator_add(handle_input)
 
     return pad
 
-# Provides a paddle that's controlled by an human player. It extends the
-# base paddle with a custom controller, which updates the paddle's state
-# based on the mouse input.
-#
-# The paddle is constrained to the screen though.
-def human_paddle(canvas):
-    def controller(pad):
-        pad.move(xpos, canvas.pointer_canvas_xy[1])
-        pad.rect = pad.rect.clamp(canvas.rect)
-        return True
+# Provides a paddle that's controlled by the x-axis of the mouse input.
+def xpaddle(name, canvas, pos):
+    def controller(pad, mouse_x, mouse_y):
+        pad.move(mouse_x, pad.rect.y)
 
-    xpos = 10
-    return paddle(canvas, xpos, controller)
-    
+    return paddle(name, canvas
+                 ,(canvas.rect.center_x, pos)
+                 ,(PADDLE_HEIGHT, PADDLE_WIDTH)
+                 ,controller)
+
+# Provides a paddle that's controlled by the y-axis of the mouse input.
+def ypaddle(name, canvas, pos):
+    def controller(pad, mouse_x, mouse_y):
+        pad.move(pad.rect.x, mouse_y)
+
+    return paddle(name, canvas
+                 ,(pos, canvas.rect.center_y)
+                 ,(PADDLE_WIDTH, PADDLE_HEIGHT)
+                 ,controller) 
 
 
+
+# Checks for collisions
+solid_areas = []
+
+def add_collision_object(obj):
+    solid_areas.append(obj)
+
+def collidesp(rect):
+    for obj in solid_areas:
+        if obj.rect.intercepts(rect):
+            return obj
+
+
+
+# The "ball"
+BALL_SIZE = (20, 20)
+
+def ball(canvas):
+    def check_collisions():
+        rect  = ball.rect
+        solid = collidesp(rect)
+        w, h  = BALL_SIZE
+        if solid:
+            # hit a paddle
+            increase_score()
+            if solid.name == 'right':  rect.right  = solid.rect.left
+            if solid.name == 'left':   rect.left   = solid.rect.right
+            if solid.name == 'bottom': rect.bottom = solid.rect.top
+            if solid.name == 'top':    rect.top    = solid.rect.bottom
+
+            ball.rect = rect
+            reverse(x=(solid.name in ['left', 'right'])
+                   ,y=(solid.name in ['top', 'bottom']))
+
+    def input_handler():
+        move()
+        check_collisions()
+        if ball.rect.left < 0 or ball.rect.right > canvas.rect.right or \
+           ball.rect.top < 0 or ball.rect.bottom > canvas.bottom:
+            fire_hooks('game_over')
+
+        return GAME_RUNNING
+
+    def move():
+        pos[0] += speed['x']
+        pos[1] += speed['y']
+        ball.move(*pos)
+
+    def init_ball(ball):
+        ball.resize(*BALL_SIZE)
+        ball.move(*canvas.rect.center)
+        ball.show()
+        animator_add(input_handler)
+        return ball
+
+    def reverse(x=False, y=False):
+        w, h = BALL_SIZE
+        if x: speed['x'] = max(min(speed['x'], w/2), -w/2) * -1.1
+        if y: speed['y'] = max(min(speed['y'], h/2), -h/2) * -1.1
+
+    ball    = init_ball(canvas.Rectangle(color=(171, 180, 161, 200)))
+    speed   = {'x': random(1, 2), 'y': random(1, 2)}
+    pos     = list(ball.pos)
+
+    return ball
+
+
+
+# The player's stuff
+SCORE = 0
+
+def increase_score():
+    set_score(SCORE + 1)
+
+def set_score(new_score):
+    global SCORE
+    SCORE = new_score
+    fire_hooks('score_change', SCORE)
+
+def score(canvas):
+    def on_score_change(new_score):
+        score_text.text_set(str(new_score))
+        center_text(canvas.rect, score_text)
+
+    score_text = text(canvas, '0', 200, (85, 87, 83, 255))
+    add_hook('score_change', on_score_change)
+    add_hook('restart_game', set_score, 0)
+    return score_text
+
+
+
 ########################################################################
 if __name__ == '__main__':
     game_main()
