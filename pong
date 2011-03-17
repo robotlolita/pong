@@ -122,8 +122,6 @@ def setup_field(engine):
 
 # Abstracts some common canvas classes in more specialized ones. In this
 # case, backgrounds and centered texts. 
-
-# Creates a background for the canvas
 def background(canvas, colour):
     bg = canvas.Rectangle(color=colour)
     bg.resize(*canvas.size)
