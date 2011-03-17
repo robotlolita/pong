@@ -27,18 +27,21 @@ Simple pong game to test how ecore and evas work together.
 
 from functools   import partial
 from collections import defaultdict
-from random      import uniform as random, seed
+from random      import uniform as randf, seed
 
 from ecore.evas  import SoftwareX11
 from ecore       import main_loop_begin, animator_add, animator_frametime_set
 from evas        import Rect
 
 
+# Initializes the random number generation
 seed()
 
 
 # The size of the screen
 SCREEN_SIZE  = (480, 480)
+
+# Whether the game is running or not
 GAME_RUNNING = True
 
 # The game (you just lost it :3) 
@@ -74,7 +77,8 @@ def game_main():
     ee.show()
     main_loop_begin()
 
-# Whenever we lose the gayme
+# Whenever we lose the gayme, this function is called, showing a "nice"
+# game-over screen and disabling the game object's handlers.
 def game_over(canvas):
     global GAME_RUNNING
 
@@ -120,8 +124,14 @@ def setup_field(engine):
 
 
 
-# Abstracts some common canvas classes in more specialized ones. In this
-# case, backgrounds and centered texts. 
+# Abstract "classes" for the standard Evas objects. These include simple
+# things like background and centered text, to full featured objects,
+# like the paddles and the ball itself.
+#
+# Basically these use the underlying canvas methods to add simple
+# geometry objects to the canvas (ie.: canvas.Rectangle()) will create a
+# Rectangle object and assign it to the canvas, automatically rendering
+# it whenever it's needed.
 def background(canvas, colour):
     bg = canvas.Rectangle(color=colour)
     bg.resize(*canvas.size)
@@ -129,6 +139,7 @@ def background(canvas, colour):
 
     return bg
 
+# Centered text stuff
 def text(canvas, string, size, colour=(200, 200, 200, 128)):
     text = canvas.Text(color=colour)
     text.text_set(string)
@@ -138,6 +149,7 @@ def text(canvas, string, size, colour=(200, 200, 200, 128)):
 
     return text
 
+# Centers a text object in the given rectangle
 def center_text(rect, text):
     x, y = rect.center
     text.move(x - text.horiz_advance/2
@@ -150,7 +162,9 @@ PADDLE_WIDTH  = 20
 PADDLE_HEIGHT = 200 
 
 # Creates a base paddle, at the given position, and using the given
-# controller function. 
+# controller function. The controller is called at 60FPS, in the
+# animator callback set by this object, and it's expected to update the
+# paddle's state depending on the mouse input.
 def paddle(name, canvas, pos, size, controller):
     # Handles the mouse input by updating the paddle's position. This is
     # run at 60 FPS, as long as the game is running (ie.: no
