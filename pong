@@ -220,6 +220,7 @@ BALL_SIZE = (20, 20)
 
 def ball(canvas):
     def clamp_bounds(solid):
+        rect = ball.rect
         if solid.name == 'right':  rect.right  = solid.rect.left
         if solid.name == 'left':   rect.left   = solid.rect.right
         if solid.name == 'bottom': rect.bottom = solid.rect.top
@@ -228,8 +229,7 @@ def ball(canvas):
         ball.rect = rect
 
     def check_collisions():
-        rect  = ball.rect
-        solid = collidesp(rect)
+        solid = collidesp(ball.rect)
         w, h  = BALL_SIZE
         if solid:
             increase_score()
