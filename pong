@@ -154,6 +154,13 @@ PADDLE_HEIGHT = 200
 # Creates a base paddle, at the given position, and using the given
 # controller function. 
 def paddle(name, canvas, pos, size, controller):
+    # Handles the mouse input by updating the paddle's position. This is
+    # run at 60 FPS, as long as the game is running (ie.: no
+    # game-over).
+    #
+    # Since the animator expects each callback to return whether it
+    # should continue running or not — by signaling with either True or
+    # False — we just return the value of GAME_RUNNING here.
     def handle_input():
         screen = canvas.rect.move_by(10, 10).inflate(-20, -20)
         px, py = canvas.pointer_canvas_xy
@@ -170,12 +177,7 @@ def paddle(name, canvas, pos, size, controller):
     # Adds the pad area as a solid area, so the ball collides with it.
     add_collision_object(pad)
 
-    # Uses the ecore animator callbacks to call the paddle controller
-    # function, this allows control to be done at a fixed framerate, and
-    # right before the rendering.
-    #
-    # Note that the controller does NOT process events, it only responds
-    # to it by updating the paddle's state.
+    # Adds the input handler to the list of animator callbacks
     animator_add(handle_input)
 
     return pad
