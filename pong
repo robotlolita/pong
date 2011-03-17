@@ -1,0 +1,152 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2010 Quildreen <http://www.mottaweb.com.br/>
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+Simple pong game to test how ecore and evas work together.
+"""
+
+from collections import defaultdict
+
+from ecore.evas  import SoftwareX11
+from ecore       import main_loop_begin, animator_add, animator_frametime_set
+from evas        import Rect
+
+
+def game_main():
+    # Instantiate a canvas using the SoftwareX11 rendering engine. This
+    # does all the work of creating the canvas, assigning it to the
+    # rendering engine and integrating it with the `ecore' loop.
+    #
+    # From there onwards, the only thing left is add objects to the
+    # Canvas, and manipulate these objects. The `ecore' loop will call
+    # render automatically on `idle'.
+    ee     = SoftwareX11(w=640, h=480)
+    canvas = ee.evas
+
+    # Setups the game window and field by creating objects and adding
+    # them to the canvas.
+    setup_field(ee)
+    
+    # Makes sure our objects are properly updated whenever the rendering
+    # engine's size changes.
+    ee.callback_resize = on_resize
+
+    # Sets the framerate of the game to 60FPS
+    animator_frametime_set(1.0 / 60.0)
+
+    # Finally, shows all this stuff to the user and enters the main
+    # loop. From there ownards the only say we have is on the callbacks
+    # from the events we've set to watch.
+    ee.title = "Pong"
+    ee.show()
+    main_loop_begin()
+
+
+# Hooks are collections of functions that are called when a certain
+# user-defined event happens. This dictionary maps each user-defined
+# event (by name) to a list of functions to be called.
+hooks = defaultdict(list)
+
+# Allows the user to add new hooks to a certain kind of event
+def add_hook(kind, fn):
+    hooks[kind].append(fn)
+
+# Allows the user to fire all hooks related to the given event, with any
+# optional positional/keyword arguments
+def fire_hooks(kind, *args, **kwargs):
+    for hook in hooks[kind]:
+        hook(*args, **kwargs)
+
+
+# Setups the field, by adding background, paddles, ball and the textual
+# representations of scores and player-names to the canvas. These are
+# self-aware objects that know how to update themselves, so we don't
+# need to worry either about re-rendering them (which is done by
+# Evas/Ecore itself), nor with manipulating them.
+def setup_field(engine):
+    canvas = engine.evas
+
+    background(canvas, (255, 255, 255, 255))
+    human_paddle(canvas)
+    paddle(canvas, canvas.rect.right - 30)
+
+  
+# Makes sure all objects are aware of resize events, by adding a hook to
+# it.
+def on_resize(engine):
+    fire_hooks('resize', engine, engine.evas)
+
+
+# Creates a background for the canvas, that's resized automatically in
+# response to a resize event.
+def background(canvas, colour):
+    def on_resize(engine, canvas):
+        bg.resize(*canvas.size)
+
+    bg = canvas.Rectangle(color=colour)
+    bg.resize(*canvas.size)
+    bg.show()
+    add_hook('resize', on_resize)
+
+    return bg
+
+
+# Creates a base paddle, at the given position, and using the given
+# controller function — if any. 
+def paddle(canvas, xpos, controller=None):
+    pad = canvas.Rectangle(color=(85,87,83,255))
+    pad.resize(20, 100)
+    pad.move(xpos, canvas.rect.center_y - 50)
+    pad.show()
+
+    # Uses the ecore animator callbacks to call the paddle controller
+    # function, this allows control to be done at a fixed framerate, and
+    # right before the rendering.
+    #
+    # Note that the controller does NOT process events, it only responds
+    # to it by updating the paddle's state.
+    if controller is not None:
+        animator_add(controller, pad)
+
+    return pad
+
+# Provides a paddle that's controlled by an human player. It extends the
+# base paddle with a custom controller, which updates the paddle's state
+# based on the mouse input.
+#
+# The paddle is constrained to the screen though.
+def human_paddle(canvas):
+    def controller(pad):
+        pad.move(xpos, canvas.pointer_canvas_xy[1])
+        pad.rect = pad.rect.clamp(canvas.rect)
+        return True
+
+    xpos = 10
+    return paddle(canvas, xpos, controller)
+    
+
+
+########################################################################
+if __name__ == '__main__':
+    game_main()
+    
