@@ -278,7 +278,7 @@ def ball(canvas):
         if y: speed['y'] = max(min(speed['y'], h/2), -h/2) * -1.1
 
     ball    = init_ball(canvas.Rectangle(color=(171, 180, 161, 200)))
-    speed   = {'x': random(1, 2), 'y': random(1, 2)}
+    speed   = {'x': randf(1, 2), 'y': randf(1, 2)}
     pos     = list(ball.pos)
 
     return ball
