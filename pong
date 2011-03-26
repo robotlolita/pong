@@ -337,8 +337,14 @@ def make_player(canvas, engine="gstreamer"):
         player.file = join_path(DATA_DIR, media)
         player.play = True
 
+    def replay(player):
+        fname = player.file
+        stop(player)
+        play(player, fname)
+
     sfx_player = Emotion(canvas, module_filename=engine)
     bgm_player = Emotion(canvas, module_filename=engine)
+    bgm_player.on_playback_finished_add(replay)
     add_hook('play_sfx', play, sfx_player)
     add_hook('play_bgm', play, bgm_player)
 
