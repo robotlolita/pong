@@ -251,11 +251,14 @@ def ball(canvas):
             reverse(x=(solid.name in ['left', 'right'])
                    ,y=(solid.name in ['top', 'bottom']))
 
+    def outta_screen_p():
+        return ball.rect.left < 0 or ball.rect.right  > canvas.rect.right \
+            or ball.rect.top  < 0 or ball.rect.bottom > canvas.bottom
+
     def input_handler():
         move()
         check_collisions()
-        if ball.rect.left < 0 or ball.rect.right > canvas.rect.right or \
-           ball.rect.top < 0 or ball.rect.bottom > canvas.bottom:
+        if outta_screen_p():
             fire_hooks('game_over')
 
         return GAME_RUNNING
