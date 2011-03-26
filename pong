@@ -344,9 +344,12 @@ def make_player(canvas, engine="gstreamer"):
 
     sfx_player = Emotion(canvas, module_filename=engine)
     bgm_player = Emotion(canvas, module_filename=engine)
+
     bgm_player.on_playback_finished_add(replay)
-    add_hook('play_sfx', play, sfx_player)
-    add_hook('play_bgm', play, bgm_player)
+
+    add_hook('play_sfx',  play, sfx_player)
+    add_hook('play_bgm',  play, bgm_player)
+    add_hook('game_over', stop, bgm_player)
 
 
 
