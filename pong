@@ -25,6 +25,7 @@
 Simple pong game to test how ecore and evas work together.
 """
 
+from os.path     import abspath, join as join_path
 from functools   import partial
 from collections import defaultdict
 from random      import uniform as randf, seed
@@ -32,6 +33,7 @@ from random      import uniform as randf, seed
 from ecore.evas  import SoftwareX11
 from ecore       import main_loop_begin, animator_add, animator_frametime_set
 from evas        import Rect
+from emotion     import Emotion
 
 
 # Initializes the random number generation
@@ -43,6 +45,9 @@ SCREEN_SIZE  = (480, 480)
 
 # Whether the game is running or not
 GAME_RUNNING = True
+
+# Directory where the freaking assets are
+DATA_DIR = abspath("./data")
 
 # The game (you just lost it :3) 
 def game_main():
@@ -114,6 +119,7 @@ def setup_field(engine):
     canvas = engine.evas
 
     background(canvas, (34, 37, 42, 255))
+    make_player(canvas)
     score(canvas)
 
     xpaddle('top', canvas, 10)
@@ -121,6 +127,8 @@ def setup_field(engine):
     ypaddle('left', canvas, 10)
     ypaddle('right', canvas, canvas.rect.bottom - PADDLE_WIDTH - 10)
     ball(canvas)
+
+    fire_hooks('play_bgm', 'bgm.mp3')
 
 
 
@@ -246,6 +254,7 @@ def ball(canvas):
         solid = collidesp(ball.rect)
         w, h  = BALL_SIZE
         if solid:
+            fire_hooks('play_sfx', 'hit.wav')
             increase_score()
             clamp_bounds(solid)
             reverse(x=(solid.name in ['left', 'right'])
@@ -308,6 +317,30 @@ def score(canvas):
     add_hook('score_change', on_score_change)
     add_hook('restart_game', set_score, 0)
     return score_text
+
+
+
+# Brings in some Emotion.
+#
+# The emotion lib is used to play sounds and videos, and it uses
+# the usual Ecore event loop and Evas for rendering.
+#
+# Emotion can use either `xine' or `gstreamer' as the sound engine, it
+# seems, but I haven't dug too much into this. But well, these two are
+# fo sho :3
+def make_player(canvas, engine="gstreamer"):
+    def stop(player):
+        player.file = ""
+    
+    def play(player, media):
+        stop(player)
+        player.file = join_path(DATA_DIR, media)
+        player.play = True
+
+    sfx_player = Emotion(canvas, module_filename=engine)
+    bgm_player = Emotion(canvas, module_filename=engine)
+    add_hook('play_sfx', play, sfx_player)
+    add_hook('play_bgm', play, bgm_player)
 
 
 
