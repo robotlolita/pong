@@ -82,6 +82,9 @@ def game_main():
     ee.show()
     main_loop_begin()
 
+    # Stops stuff when the game ends
+    fire_hooks('the_end')
+
 # Whenever we lose the gayme, this function is called, showing a "nice"
 # game-over screen and disabling the game object's handlers.
 def game_over(canvas):
@@ -348,8 +351,12 @@ def make_player(canvas, engine="gstreamer"):
     bgm_player.on_playback_finished_add(replay)
 
     add_hook('play_sfx',  play, sfx_player)
+    add_hook('the_end',   stop, sfx_player)
+
     add_hook('play_bgm',  play, bgm_player)
     add_hook('game_over', stop, bgm_player)
+    add_hook('the_end',   stop, bgm_player)
+
 
 
 
