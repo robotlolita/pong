@@ -24,10 +24,20 @@ After installing the bindings, just run the `pong` script:
 
     ./pong
     
-    or
+or
     
     python pong
     
+
+Acknowledgements
+----------------
+
+- The `hit.wav` sound was made on sfxr.
+- The `bgm.mp3` file is [imcompetech][]'s Kick Shock, released under
+  Creative Commons. 
+
+[imcompetech]: http://incompetech.com/
+
 
 Licence
 -------
