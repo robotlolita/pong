@@ -1,0 +1,183 @@
+group { name: "splash";
+   min: SCREEN_SIZE;
+   max: SCREEN_SIZE;
+
+   images {
+      image: "p.png" RAW;
+      image: "o.png" RAW;
+      image: "n.png" RAW;
+      image: "g.png" RAW; }
+
+   parts {
+      part { name: "splash/bg";
+         type: RECT;
+         description { state: "default" 0.0;
+            color: SCREEN_BG; }}
+
+      part { name: "splash/title";
+         type:   IMAGE;
+         description { state: "default" 0.0;
+            color:  text_colour(190);
+            min: 300 90;
+            max: 300 90;
+            image {
+               normal: "o.png"; }}
+         description { state: "@Title" 0.0;
+            inherit: "default" 0.0;
+            color:  text_colour(0);
+            image {
+               normal: "o.png"; }
+            rel1 {
+               offset: 0 -200; }}
+         description { state: "@Title" 0.6;
+            inherit: "@Title" 0.0;
+            color:  text_colour(190);
+            image {
+               normal: "o.png"; }
+            rel1 {
+               offset: 0 20; }}
+         description { state: "@Title" 1.0;
+            inherit: "@Title" 0.6;
+            image {
+               normal: "o.png"; }
+            rel1 {
+               offset: 0 0; }}
+         description { state: "@Menu" 0;
+            inherit: "default" 0;
+            image {
+               normal: "o.png"; }
+            rel1 {
+               offset: 0 -170; }}}                
+
+      part { name: "splash/title-p";
+         type: IMAGE;
+         description { state: "default" 0;
+            color: text_colour(0);
+            min: 300 90;
+            max: 300 90;
+            image {
+               normal: "p.png"; }
+            rel1 {
+               offset: 50 -170; }}
+         description { state: "visible" 0;
+            inherit: "default" 0;
+            color: text_colour(190);
+            rel1 { 
+               offset: 0 -170; }}}
+
+      part { name: "splash/title-n";
+         type: IMAGE;
+         description { state: "default" 0;
+            color: text_colour(0);
+            min: 300 90;
+            max: 300 90;
+            image {
+               normal: "n.png"; }
+            rel1 {
+               offset: -50 -170; }}
+         description { state: "visible" 0;
+            inherit: "default" 0;
+            color: text_colour(190);
+            rel1 {
+               offset: 0 -170; }}}
+
+      part { name: "splash/title-g";
+         type: IMAGE;
+         description { state: "default" 0;
+            color: text_colour(0);
+            min: 300 90;
+            max: 300 90;
+            image {
+               normal: "g.png"; }
+            rel1 { 
+               offset: -100 -170; }}
+         description { state: "visible" 0;
+            inherit: "default" 0;
+            color: text_colour(190);
+            rel1 {
+               offset: 0 -170; }}}
+               
+      part { name: "splash/pad";
+         type: RECT;
+         description { state: "default" 0.0;
+            fixed: 1 1;
+            max:   PAD_SIZE;
+            color: pad_colour(190);
+            rel1 {
+               offset: 0 70; }}
+         
+         description { state: "@Pad" 0.0;
+            inherit: "default" 0.0;
+            max:     200 20;
+            color:   pad_colour(0); }
+         description { state: "@Pad" 1.0;
+            inherit: "@Pad" 0.0;
+            color:   pad_colour(190); }
+         description { state: "@Menu" 0;
+            inherit: "default" 0;
+            rel1 {
+               offset: 0 -100; }}}}
+   
+   programs {
+      program { name: "show-splash";
+         signal: "load";
+         after:  "@Title::show";
+         after:  "@Pad::show"; }
+      
+      program { name: "@Title::show";
+         action: STATE_SET "@Title" 0.0;
+         target: "splash/title";
+         after:  "@Title::show:1"; }
+      
+      program { name: "@Title::show:1";
+         action:     STATE_SET "@Title" 0.6;
+         transition: ACCELERATE 0.6;
+         target: "splash/title";
+         after:  "@Title::show:2"; }
+      
+      program { name: "@Title::show:2";
+         action:     STATE_SET "@Title" 1.0;
+         transition: DECELERATE 0.4;
+         target: "splash/title";
+         after:  "@Title::normalize"; }
+      
+      program { name: "@Title::normalize";
+         action: STATE_SET "default" 0.0;
+         target: "splash/title"; }
+      
+      program { name: "@Title::show-full";
+         transition: DECELERATE 0.5;
+         action: STATE_SET "visible" 0;
+         target: "splash/title-p";
+         target: "splash/title-n";
+         target: "splash/title-g"; }
+
+      program { name: "@Pad::show";
+         action: STATE_SET "@Pad" 0.0;
+         target: "splash/pad";
+         after:  "@Pad::show:1"; }
+      
+      program { name: "@Pad::show:1";
+         transition: ACCELERATE 0.6;
+         action: STATE_SET "@Pad" 1.0;
+         target: "splash/pad";
+         after:  "@Pad::normalize"; }
+      
+      program { name: "@Pad::normalize";
+         transition: LINEAR 0.4;
+         action:     STATE_SET "default" 0.0;
+         target: "splash/pad";
+         after:  "@main-menu::show"; }
+      
+      program { name: "@main-menu::show";
+         transition: DECELERATE 0.5;
+         action: STATE_SET "@Menu" 0;
+         in:     0.2 0;
+         target: "splash/title";
+         target: "splash/pad";
+         after: "@Title::show-full";
+         after: "@main-menu::buttons"; }
+
+      program { name: "@main-menu::buttons";
+         action: SIGNAL_EMIT "show,main-menu" ""; }}
+}

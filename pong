@@ -31,9 +31,11 @@ from collections import defaultdict
 from random      import uniform as randf, seed
 
 from ecore.evas  import SoftwareX11
-from ecore       import main_loop_begin, animator_add, animator_frametime_set
+from ecore       import main_loop_begin, animator_add, animator_frametime_set,\
+                        main_loop_quit
 from evas        import Rect
 from emotion     import Emotion
+from edje        import Edje
 
 
 # Initializes the random number generation
@@ -48,6 +50,7 @@ GAME_RUNNING = True
 
 # Directory where the freaking assets are
 DATA_DIR = abspath("./data")
+THEME    = join_path(DATA_DIR, 'theme.edj')
 
 # The game (you just lost it :3) 
 def game_main():
@@ -69,9 +72,6 @@ def game_main():
     # Sets the framerate of the game to 60FPS
     animator_frametime_set(1.0 / 60.0)
 
-    # Adds some useful hooks
-    add_hook('game_over', game_over, canvas)
-
     # Finally, shows all this stuff to the user and enters the main
     # loop. From there ownards the only say we have is on the callbacks
     # from the events we've set to watch.
@@ -83,7 +83,7 @@ def game_main():
     main_loop_begin()
 
     # Stops stuff when the game ends
-    fire_hooks('the_end')
+    fire_hooks('the:end')
 
 # Whenever we lose the gayme, this function is called, showing a "nice"
 # game-over screen and disabling the game object's handlers.
@@ -121,17 +121,15 @@ def fire_hooks(kind, *args, **kwargs):
 def setup_field(engine):
     canvas = engine.evas
 
-    background(canvas, (34, 37, 42, 255))
     make_player(canvas)
-    score(canvas)
 
-    xpaddle('top', canvas, 10)
-    xpaddle('bottom', canvas, canvas.rect.right - PADDLE_WIDTH - 10)
-    ypaddle('left', canvas, 10)
-    ypaddle('right', canvas, canvas.rect.bottom - PADDLE_WIDTH - 10)
-    ball(canvas)
+    splash_screen(canvas)
+    main_menu(canvas)
+    game_screen(canvas)
 
-    fire_hooks('play_bgm', 'bgm.mp3')
+    # Adds some useful hooks
+    add_hook('game:over', game_over, canvas)
+    fire_hooks('play:bgm', 'bgm.mp3')
 
 
 
@@ -165,6 +163,54 @@ def center_text(rect, text):
     x, y = rect.center
     text.move(x - text.horiz_advance/2
              ,y - text.vert_advance/2)
+
+
+
+# Splash screen and main menu
+def splash_screen(canvas):
+    def show_main_menu(obj, signal, source):
+        fire_hooks('show:main-menu')
+
+    splash = Edje(canvas, file=THEME, group='splash')
+    splash.signal_callback_add("show,main-menu", "", show_main_menu)
+    splash.show()
+
+
+def main_menu(canvas):
+    def on_show():
+        menu.signal_emit("show,main-menu", "")
+
+    def quit_game(obj, signal, source):
+        main_loop_quit()
+
+    def start_game(obj, signal, source):
+        fire_hooks('game:new')
+
+    menu = Edje(canvas, file=THEME, group="main-menu")
+    menu.signal_callback_add("game,new",  "", start_game)
+    menu.signal_callback_add("game,quit", "", quit_game)
+    menu.show()
+    
+    add_hook('show:main-menu', on_show)
+
+
+def game_screen(canvas):
+    def start_game():
+        set_score(0)
+        xpaddle('top', canvas, 10)
+        xpaddle('bottom', canvas, canvas.rect.right - PADDLE_WIDTH - 10)
+        ypaddle('left', canvas, 10)
+        ypaddle('right', canvas, canvas.rect.bottom - PADDLE_WIDTH - 10)
+        ball(canvas)
+        game.show()
+
+    def on_score_change(new_score):
+        game.part_text_set("game/score", str(new_score))
+
+    game = Edje(canvas, file=THEME, group="game-screen")
+    add_hook("game:new", start_game)
+    add_hook('score:change', on_score_change)
+
 
 
 
@@ -257,7 +303,7 @@ def ball(canvas):
         solid = collidesp(ball.rect)
         w, h  = BALL_SIZE
         if solid:
-            fire_hooks('play_sfx', 'hit.wav')
+            fire_hooks('play:sfx', 'hit.wav')
             increase_score()
             clamp_bounds(solid)
             reverse(x=(solid.name in ['left', 'right'])
@@ -271,7 +317,7 @@ def ball(canvas):
         move()
         check_collisions()
         if outta_screen_p():
-            fire_hooks('game_over')
+            fire_hooks('game:over')
 
         return GAME_RUNNING
 
@@ -305,11 +351,12 @@ SCORE = 0
 
 def increase_score():
     set_score(SCORE + 1)
+    return True
 
 def set_score(new_score):
     global SCORE
     SCORE = new_score
-    fire_hooks('score_change', SCORE)
+    fire_hooks('score:change', SCORE)
 
 def score(canvas):
     def on_score_change(new_score):
@@ -317,8 +364,8 @@ def score(canvas):
         center_text(canvas.rect, score_text)
 
     score_text = text(canvas, '0', 200, (85, 87, 83, 255))
-    add_hook('score_change', on_score_change)
-    add_hook('restart_game', set_score, 0)
+    add_hook('score:change', on_score_change)
+    add_hook('game:new', set_score, 0)
     return score_text
 
 
@@ -350,12 +397,12 @@ def make_player(canvas, engine="gstreamer"):
 
     bgm_player.on_playback_finished_add(replay)
 
-    add_hook('play_sfx',  play, sfx_player)
-    add_hook('the_end',   stop, sfx_player)
+    add_hook('play:sfx',  play, sfx_player)
+    add_hook('game:end',   stop, sfx_player)
 
-    add_hook('play_bgm',  play, bgm_player)
-    add_hook('game_over', stop, bgm_player)
-    add_hook('the_end',   stop, bgm_player)
+    add_hook('play:bgm',  play, bgm_player)
+    add_hook('game:over', stop, bgm_player)
+    add_hook('game:end',   stop, bgm_player)
 
 
 

@@ -1,0 +1,20 @@
+group { name: "game-screen";
+   min: SCREEN_SIZE;
+   max: SCREEN_SIZE;
+   
+   parts { 
+      part { name: "game/bg";
+         type: RECT;
+         description { state: "default" 0;
+            color: SCREEN_BG; }}
+      
+      part { name: "game/score";
+         type: TEXT;
+         effect: OUTLINE_SOFT_SHADOW;
+         description { state: "default" 0;
+            color_class: "text-colour";
+            text {
+               text: "0";
+               font: "scoref";
+               size: 150;
+               min: 1 1; }}}}}

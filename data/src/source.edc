@@ -1,0 +1,25 @@
+#define SCREEN_SIZE 480 480
+#define PAD_SIZE    400  5
+#define BALL_SIZE   20   20
+
+#define SCREEN_BG         34  37  42 255
+#define pad_colour(a)    238 238 236   a
+#define ball_colour(a)   171 180 161   a
+#define text_colour(a)   200 200 200   a
+#define shadow_colour(a)  34  37  42   a
+
+fonts { 
+   font: "qube.ttf" "scoref";
+   font: "qube-fill.ttf" "pixelf"; }
+
+color_classes {
+   color_class { name: "text-colour";
+      color:  text_colour(190);
+      color2: shadow_colour(128);
+      color3: shadow_colour(128); }}
+
+collections {
+#include "splash-screen.edc"
+#include "main-menu.edc"
+#include "game.edc"
+}

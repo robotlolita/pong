@@ -1,0 +1,111 @@
+group { name: "main-menu";
+   min: SCREEN_SIZE;
+   max: SCREEN_SIZE;
+
+   parts { 
+      part { name: "mm/button-start";
+         type: TEXT;
+         effect: OUTLINE_SOFT_SHADOW;
+         description { state: "default" 0;
+            color: text_colour(0);
+            rel1 {
+               offset: -50 50; }
+            text {
+               text: "NEW GAME";
+               font: "pixelf";
+               size: 48;
+               min: 1 1; }}
+         description { state: "idle" 0;
+            inherit: "default" 0;
+            color: text_colour(128);
+            rel1 {
+               offset: 0 50; }}
+         description { state: "hovered" 0;
+            inherit: "idle" 0;
+            color: text_colour(255); }}
+
+      part { name: "mm/button-quit";
+         type: TEXT;
+         effect: OUTLINE_SOFT_SHADOW;
+         description { state: "default" 0;
+            color: text_colour(0);
+            rel1 {
+               relative: 0 0;
+               offset: -50 170; }
+            text {
+               text: "QUIT";
+               font: "pixelf";
+               size: 48;
+               min: 1 1; }}
+         description { state: "idle" 0;
+            inherit: "default" 0;
+            color: text_colour(128);
+            rel1 {
+               offset: 0 170; }}
+         description { state: "hovered" 0;
+            inherit: "idle" 0;
+            color: text_colour(255); }}}
+
+   programs {
+      program { name: "@main-menu::show-buttons";
+         signal: "show,main-menu";
+         after: "@main-menu::show-start";
+         after: "@main-menu::show-quit"; }
+
+      program { name: "@main-menu::show-start";
+         transition: DECELERATE 0.5;
+         action: STATE_SET "idle" 0;
+         target: "mm/button-start"; }
+
+      program { name: "@main-menu::start:hovered";
+         signal: "mouse,in";
+         source: "mm/button-start";
+         filter: "mm/button-start" "idle";
+         transition: DECELERATE 0.3;
+         action: STATE_SET "hovered" 0;
+         target: "mm/button-start"; }
+
+      program { name: "@main-menu::start:unhovered";
+         signal: "mouse,out";
+         source: "mm/button-start";
+         filter: "mm/button-start" "hovered";
+         transition: LINEAR 0.5;
+         action: STATE_SET "idle" 0;
+         target: "mm/button-start"; }
+
+      program { name: "@main-menu::start:clicked";
+         signal: "mouse,clicked,1";
+         source: "mm/button-start";
+         filter: "mm/button-start" "hovered";
+         action: SIGNAL_EMIT "game,new" ""; }
+
+      program { name: "@main-menu::quit:hovered";
+         signal: "mouse,in";
+         source: "mm/button-quit";
+         filter: "mm/button-quit" "idle";
+         transition: DECELERATE 0.3;
+         action: STATE_SET "hovered" 0;
+         target: "mm/button-quit"; }
+
+      program { name: "@main-menu::quit:unhovered";
+         signal: "mouse,out";
+         source: "mm/button-quit";
+         filter: "mm/button-quit" "hovered";
+         transition: LINEAR 0.5;
+         action: STATE_SET "idle" 0;
+         target: "mm/button-quit"; }
+
+      program { name: "@main-menu::quit:clicked";
+         signal: "mouse,clicked,1";
+         source: "mm/button-quit";
+         filter: "mm/button-quit" "hovered";
+         action: SIGNAL_EMIT "game,quit" ""; }
+      
+      program { name: "@main-menu::show-quit";
+         transition: DECELERATE 0.5;
+         action: STATE_SET "idle" 0;
+         in: 0.2 0;
+         target: "mm/button-quit"; }}
+              
+}
+            
